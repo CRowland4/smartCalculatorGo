@@ -4,14 +4,21 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
 )
 
+const (
+	latinCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	numbers         = "1234567890"
+)
+
 func main() {
+	variables := make(map[string]string)
 	for {
-		expression := strings.ToLower(strings.TrimSpace(readLine()))
+		expression := strings.TrimSpace(readLine())
 		switch {
 		case expression == "/exit":
 			fmt.Println("Bye!")
@@ -20,12 +27,76 @@ func main() {
 			continue
 		case isCommand(expression):
 			executeCommand(expression)
-		case !isExpressionValid(expression):
+		case isCreateVariable(expression):
+			variables = assignVariable(expression, variables)
+		case strings.ContainsAny(substituteVariables(expression, variables), latinCharacters):
+			fmt.Println("Unknown variable")
+		case !isExpressionValid(substituteVariables(expression, variables)):
 			fmt.Println("Invalid expression")
 		default:
-			fmt.Println(calculateResult(expression))
+			fmt.Println(calculateResult(substituteVariables(expression, variables)))
 		}
 	}
+}
+
+func assignVariable(expression string, variables map[string]string) (updatedVariables map[string]string) {
+	expression = strings.Replace(expression, " ", "", -1)
+	sides := strings.Split(expression, "=")
+	identifier, assignment := strings.TrimSpace(sides[0]), strings.TrimSpace(sides[1])
+	if !isVariableCreationValid(sides, variables) {
+		return variables
+	}
+
+	variables[identifier] = substituteVariables(assignment, variables)
+	return variables
+}
+
+func substituteVariables(expression string, variables map[string]string) (updatedString string) {
+	identifiers := getVariableIdentifiers(variables)
+	sort.Slice(identifiers, func(i, j int) bool {
+		return len(identifiers[i]) > len(identifiers[j])
+	})
+
+	for _, identifier := range identifiers {
+		expression = strings.Replace(expression, identifier, variables[identifier], -1)
+	}
+
+	return expression
+}
+
+func getVariableIdentifiers(variables map[string]string) (identifiers []string) {
+	for key, _ := range variables {
+		identifiers = append(identifiers, key)
+	}
+
+	return identifiers
+}
+
+func isVariableCreationValid(sides []string, variables map[string]string) bool {
+	if len(sides) != 2 {
+		fmt.Println("Invalid assignment")
+		return false
+	}
+	if strings.Trim(sides[0], latinCharacters) != "" {
+		fmt.Println("Invalid identifier")
+		return false
+	}
+
+	if (strings.Trim(sides[1], latinCharacters) != "") && (strings.Trim(sides[1], numbers) != "") {
+		fmt.Println("Invalid assignment")
+		return false
+	}
+	_, ok := variables[sides[1]]
+	if (strings.Trim(sides[1], latinCharacters) == "") && !ok {
+		fmt.Println("Unknown variable")
+		return false
+	}
+
+	return true
+}
+
+func isCreateVariable(expression string) bool {
+	return strings.Contains(expression, "=")
 }
 
 func executeCommand(command string) {
