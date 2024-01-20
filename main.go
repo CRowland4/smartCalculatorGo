@@ -10,24 +10,63 @@ import (
 )
 
 func main() {
-	var result int
 	for {
-		line := readLine()
-		switch strings.TrimSpace(line) {
-		case "":
-			continue
-		case "/exit":
+		expression := strings.ToLower(strings.TrimSpace(readLine()))
+		switch {
+		case expression == "/exit":
 			fmt.Println("Bye!")
 			return
-		case "/help":
-			fmt.Println("The program calculates simple math operations using + and -")
+		case expression == "":
 			continue
+		case isCommand(expression):
+			executeCommand(expression)
+		case !isExpressionValid(expression):
+			fmt.Println("Invalid expression")
 		default:
-			result = calculateResult(line)
+			fmt.Println(calculateResult(expression))
 		}
-
-		fmt.Println(result)
 	}
+}
+
+func executeCommand(command string) {
+	switch command {
+	case "/help":
+		fmt.Println("This program calculates simple expressions containing the + and - operators.")
+	default:
+		fmt.Println("Unknown command")
+
+	}
+}
+
+func isCommand(expression string) bool {
+	return strings.HasPrefix(expression, "/")
+}
+
+func isExpressionValid(expression string) bool {
+	if strings.Trim(expression, "+-1234567890 ") != "" {
+		return false
+	}
+
+	if !strings.ContainsAny(expression[len(expression)-1:], "1234567890") {
+		return false
+	}
+
+	if hasSpaceWithNoOperator(expression) {
+		return false
+	}
+
+	return true
+}
+
+func hasSpaceWithNoOperator(expression string) bool {
+	fields := strings.Fields(expression)
+	for i := 0; i < len(fields)-1; i++ {
+		if strings.Trim(fields[i], "1234567890") == "" && strings.Trim(fields[i+1], "1234567890") == "" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func calculateResult(input string) (result int) {
