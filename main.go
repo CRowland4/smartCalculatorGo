@@ -102,7 +102,7 @@ func isCreateVariable(expression string) bool {
 func executeCommand(command string) {
 	switch command {
 	case "/help":
-		fmt.Println("This program calculates simple expressions containing the + and - operators.")
+		fmt.Println("This program is a calculator that supports +, -, and variable assignment.")
 	default:
 		fmt.Println("Unknown command")
 
