@@ -9,39 +9,42 @@ import (
 )
 
 func main() {
+	var nums []int
 	for {
 		input := readLine()
-		if input == "/exit" {
+		switch strings.TrimSpace(input) {
+		case "":
+			continue
+		case "/exit":
 			fmt.Println("Bye!")
 			return
+		case "/help":
+			fmt.Println("The program calculates the sum of numbers")
+			continue
+		default:
+			nums = parseNums(input)
 		}
 
-		if num1, num2, isValid := interpretInput(input); isValid {
-			fmt.Println(num1 + num2)
-		}
+		fmt.Println(sum(nums))
 	}
-
 }
 
-func interpretInput(input string) (num1, num2 int, isValid bool) {
-	var snum1, snum2 string
-	fmt.Sscanf(input, "%s %s", &snum1, &snum2)
-	if (strings.TrimSpace(snum1) == "") && (strings.TrimSpace(snum2) == "") {
-		return 0, 0, false
+func sum(nums []int) (result int) {
+	for _, num := range nums {
+		result += num
 	}
 
-	if strings.TrimSpace(snum1) == "" {
-		num1 = 0
-		num2, _ = strconv.Atoi(snum2)
-	} else if strings.TrimSpace(snum2) == "" {
-		num2 = 0
-		num1, _ = strconv.Atoi(snum1)
-	} else {
-		num1, _ = strconv.Atoi(snum1)
-		num2, _ = strconv.Atoi(snum2)
+	return result
+}
+
+func parseNums(input string) (nums []int) {
+	stringNums := strings.Split(input, " ")
+	for _, num := range stringNums {
+		integer, _ := strconv.Atoi(num)
+		nums = append(nums, integer)
 	}
 
-	return num1, num2, true
+	return nums
 }
 
 func readLine() (line string) {
