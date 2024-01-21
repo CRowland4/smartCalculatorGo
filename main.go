@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -14,6 +15,10 @@ const (
 	latinCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	numbers         = "1234567890"
 )
+
+type Stack struct {
+	storage []string
+}
 
 func main() {
 	variables := make(map[string]string)
@@ -102,7 +107,7 @@ func isCreateVariable(expression string) bool {
 func executeCommand(command string) {
 	switch command {
 	case "/help":
-		fmt.Println("This program is a calculator that supports +, -, and variable assignment.")
+		fmt.Println("This program is a calculator that supports +, -, *, /, parenthesis and variable assignment.")
 	default:
 		fmt.Println("Unknown command")
 
@@ -114,11 +119,19 @@ func isCommand(expression string) bool {
 }
 
 func isExpressionValid(expression string) bool {
-	if strings.Trim(expression, "+-1234567890 ") != "" {
+	if strings.Trim(expression, "()*/+-1234567890 ") != "" {
 		return false
 	}
 
-	if !strings.ContainsAny(expression[len(expression)-1:], "1234567890") {
+	if strings.Contains(expression, "**") || strings.Contains(expression, "//") {
+		return false
+	}
+
+	if !strings.ContainsAny(expression[len(expression)-1:], "1234567890)") {
+		return false
+	}
+
+	if !areParenthesisValid(expression) {
 		return false
 	}
 
@@ -127,6 +140,21 @@ func isExpressionValid(expression string) bool {
 	}
 
 	return true
+}
+
+func areParenthesisValid(expression string) bool {
+	var stack Stack
+	for _, char := range expression {
+		if char == '(' {
+			stack.Push(string(char))
+		} else if char == ')' && len(stack.storage) == 0 {
+			return false
+		} else if char == ')' {
+			_, _ = stack.Pop()
+		}
+	}
+
+	return len(stack.storage) == 0
 }
 
 func hasSpaceWithNoOperator(expression string) bool {
@@ -141,16 +169,96 @@ func hasSpaceWithNoOperator(expression string) bool {
 }
 
 func calculateResult(input string) (result int) {
-	for input != "" {
-		var digits []rune
-		var nonDigits []rune
+	postfix := convertToPostfix(input)
+	return calculatePostfix(postfix)
+}
 
-		input, nonDigits = consumeNonDigits(input)
-		input, digits = consumeDigits(input)
-		result = newResult(result, getNumFromRunes(digits), getSignFromRunes(nonDigits))
+func calculatePostfix(postfix string) (result int) {
+	var stack Stack
+	postfixString := strings.Fields(postfix) // 7 * 4 / 2 - (3 - 1)  ~~~~~~~~~~    7 4 * 2 / 3 1 - -
+
+	for _, element := range postfixString {
+		if _, ok := strconv.Atoi(element); ok == nil {
+			stack.Push(element)
+		} else if isOperator(element) {
+			num1, _ := stack.Pop()
+			num2, _ := stack.Pop()
+			float1, _ := strconv.ParseFloat(num1, 64)
+			float2, _ := strconv.ParseFloat(num2, 64)
+			stack.Push(performOperator(float1, float2, element))
+		}
+	}
+	topOfStack, _ := stack.Pop()
+	result, _ = strconv.Atoi(topOfStack)
+	return result
+}
+
+func performOperator(num1, num2 float64, operator string) (result string) {
+	switch operator {
+	case "*":
+		result = strconv.FormatFloat(num2*num1, 'f', -1, 64)
+	case "/":
+		result = strconv.FormatFloat(num2/num1, 'f', -1, 64)
+	case "+":
+		result = strconv.FormatFloat(num2+num1, 'f', -1, 64)
+	default:
+		result = strconv.FormatFloat(num2-num1, 'f', -1, 64)
 	}
 
 	return result
+}
+
+func isOperator(char string) bool {
+	if char == "/" || char == "+" || char == "-" || char == "*" {
+		return true
+	}
+
+	return false
+}
+
+func convertToPostfix(prefix string) (postfix string) {
+	var stack Stack
+
+	for _, char := range prefix {
+		if unicode.IsDigit(char) || string(char) == " " { // 1
+			postfix += string(char)
+		} else if len(stack.storage) == 0 || stack.Peek() == "(" { // 2
+			stack.Push(string(char))
+		} else if precedence(string(char)) > precedence(stack.Peek()) { // 3
+			stack.Push(string(char))
+		} else if char == '(' { // 5
+			stack.Push(string(char))
+		} else if char == ')' { // 6
+			for {
+				operator, _ := stack.Pop()
+				if operator == "(" {
+					break
+				}
+				postfix += " " + operator
+			}
+		} else if precedence(string(char)) <= precedence(stack.Peek()) { // 4
+			for {
+				if precedence(stack.Peek()) < precedence(string(char)) || stack.Peek() == ")" || len(stack.storage) == 0 {
+					stack.Push(string(char))
+					break
+				}
+				op, _ := stack.Pop()
+				postfix += op
+			}
+		}
+	}
+
+	for len(stack.storage) != 0 {
+		oper, _ := stack.Pop()
+		postfix += " " + string(oper)
+	}
+
+	return postfix
+}
+
+func precedence(operator string) (precedence int) {
+	operatorMap := map[string]int{"+": 0, "-": 0, "*": 1, "/": 1}
+	return operatorMap[operator]
 }
 
 func consumeNonDigits(input string) (newInput string, nonDigits []rune) {
@@ -229,4 +337,28 @@ func readLine() (line string) {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
 	return scanner.Text()
+}
+
+func (s *Stack) Push(value string) {
+	s.storage = append(s.storage, value)
+}
+
+func (s *Stack) Pop() (string, error) {
+	last := len(s.storage) - 1
+	if last <= -1 {
+		return "0", errors.New("stack is empty")
+	}
+
+	value := s.storage[last]
+	s.storage = s.storage[:last]
+
+	return value, nil
+}
+
+func (s *Stack) Peek() string {
+	if len(s.storage) == 0 {
+		return ""
+	} else {
+		return s.storage[len(s.storage)-1]
+	}
 }
