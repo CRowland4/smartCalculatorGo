@@ -175,7 +175,7 @@ func calculateResult(input string) (result int) {
 
 func calculatePostfix(postfix string) (result int) {
 	var stack Stack
-	postfixString := strings.Fields(postfix) // 7 * 4 / 2 - (3 - 1)  ~~~~~~~~~~    7 4 * 2 / 3 1 - -
+	postfixString := strings.Fields(postfix)
 
 	for _, element := range postfixString {
 		if _, ok := strconv.Atoi(element); ok == nil {
@@ -220,15 +220,15 @@ func convertToPostfix(prefix string) (postfix string) {
 	var stack Stack
 
 	for _, char := range prefix {
-		if unicode.IsDigit(char) || string(char) == " " { // 1
+		if unicode.IsDigit(char) || string(char) == " " {
 			postfix += string(char)
-		} else if len(stack.storage) == 0 || stack.Peek() == "(" { // 2
+		} else if len(stack.storage) == 0 || stack.Peek() == "(" {
 			stack.Push(string(char))
-		} else if precedence(string(char)) > precedence(stack.Peek()) { // 3
+		} else if precedence(string(char)) > precedence(stack.Peek()) {
 			stack.Push(string(char))
-		} else if char == '(' { // 5
+		} else if char == '(' {
 			stack.Push(string(char))
-		} else if char == ')' { // 6
+		} else if char == ')' {
 			for {
 				operator, _ := stack.Pop()
 				if operator == "(" {
@@ -236,7 +236,7 @@ func convertToPostfix(prefix string) (postfix string) {
 				}
 				postfix += " " + operator
 			}
-		} else if precedence(string(char)) <= precedence(stack.Peek()) { // 4
+		} else if precedence(string(char)) <= precedence(stack.Peek()) {
 			for {
 				if precedence(stack.Peek()) < precedence(string(char)) || stack.Peek() == ")" || len(stack.storage) == 0 {
 					stack.Push(string(char))
