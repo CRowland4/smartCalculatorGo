@@ -22,6 +22,7 @@ type Stack struct {
 
 func main() {
 	variables := make(map[string]string)
+	fmt.Println("Enter an expression, '/help' for help, or '/exit' to exit the pogram.\n")
 	for {
 		expression := strings.TrimSpace(readLine())
 		switch {
@@ -168,12 +169,12 @@ func hasSpaceWithNoOperator(expression string) bool {
 	return false
 }
 
-func calculateResult(input string) (result int) {
+func calculateResult(input string) (result string) {
 	postfix := convertToPostfix(input)
 	return calculatePostfix(postfix)
 }
 
-func calculatePostfix(postfix string) (result int) {
+func calculatePostfix(postfix string) (result string) {
 	var stack Stack
 	postfixString := strings.Fields(postfix)
 
@@ -188,8 +189,7 @@ func calculatePostfix(postfix string) (result int) {
 			stack.Push(performOperator(float1, float2, element))
 		}
 	}
-	topOfStack, _ := stack.Pop()
-	result, _ = strconv.Atoi(topOfStack)
+	result, _ = stack.Pop()
 	return result
 }
 
@@ -223,9 +223,13 @@ func convertToPostfix(prefix string) (postfix string) {
 		if unicode.IsDigit(char) || string(char) == " " {
 			postfix += string(char)
 		} else if len(stack.storage) == 0 || stack.Peek() == "(" {
+			postfix += " "
 			stack.Push(string(char))
+			postfix += " "
 		} else if precedence(string(char)) > precedence(stack.Peek()) {
+			postfix += " "
 			stack.Push(string(char))
+			postfix += " "
 		} else if char == '(' {
 			stack.Push(string(char))
 		} else if char == ')' {
@@ -234,16 +238,17 @@ func convertToPostfix(prefix string) (postfix string) {
 				if operator == "(" {
 					break
 				}
-				postfix += " " + operator
+				postfix += " " + operator + " "
 			}
 		} else if precedence(string(char)) <= precedence(stack.Peek()) {
+			postfix += " "
 			for {
 				if precedence(stack.Peek()) < precedence(string(char)) || stack.Peek() == ")" || len(stack.storage) == 0 {
 					stack.Push(string(char))
 					break
 				}
 				op, _ := stack.Pop()
-				postfix += op
+				postfix += " " + op + " "
 			}
 		}
 	}
